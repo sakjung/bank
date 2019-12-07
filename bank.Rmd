@@ -1,0 +1,506 @@
+---
+title: "Bank Direct Marketing"
+author: "Jung"
+date: "2019-12-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Data Understanding
+```{r}
+rm(list=ls())
+library("tidyverse")
+```
+
+## 1.1 Collect Initial Data
+```{r load datasets}
+# Import bank-full data and save it as bank
+bank <- read.csv("bank-full.csv", sep = ';')
+bank_svm <- read.csv("bank.csv", sep=";")
+```
+Notes:
+1) bank-full.csv with all examples, ordered by date (from May 2008 to November 2010).
+2) bank.csv with 10% of the examples (4521), randomly selected from bank-full.csv.
+The smallest dataset is provided to test more computationally demanding machine learning algorithms (e.g. SVM).
+
+## 1.2 Describe Data
+```{r}
+glimpse(bank)
+glimpse(bank_svm)
+summary(bank)
+summary(bank_svm)
+```
+ **bank client data:**
+1 - age (numeric)
+2 - job : type of job (categorical: "admin.","unknown","unemployed","management","housemaid","entrepreneur","student","blue-collar","self-employed","retired","technician","services") 
+3 - marital : marital status (categorical: "married","divorced","single"; note: "divorced" means divorced or widowed)
+4 - education (categorical:"unknown","secondary","primary","tertiary")
+5 - default: has credit in default? (binary: "yes","no")
+6 - balance: average yearly balance, in euros (numeric) 
+7 - housing: has housing loan? (binary: "yes","no")
+8 - loan: has personal loan? (binary: "yes","no")
+
+**related with the last contact of the current campaign:**
+9 - contact: contact communication type (categorical:"unknown","telephone","cellular") 
+10 - day: last contact day of the month (numeric)
+11 - month: last contact month of year (categorical: "jan", "feb", "mar", ..., "nov", "dec")
+12 - duration: last contact duration, in seconds (numeric)
+
+**other attributes:**
+13 - campaign: number of contacts performed during this campaign and for this client (numeric, includes last contact)
+14 - pdays: number of days that passed by after the client was last contacted from a previous campaign (numeric, -1 means client was not previously contacted)
+15 - previous: number of contacts performed before this campaign and for this client (numeric)
+16 - poutcome: outcome of the previous marketing campaign (categorical: "unknown","other","failure","success")
+
+**Output variable (desired target):**
+17 - y - has the client subscribed a term deposit? (binary: "yes","no")
+
+-> WE ARE INTERESTED IN "YES"!
+
+# 2. Data Preparation
+## 2.1 Information Gain
+```{r}
+library(FSelector)
+```
+
+```{r}
+attribute_weights <- information.gain(y~., bank)
+attribute_weights_svm <- information.gain(y~., bank_svm)
+```
+
+```{r}
+(filtered_attribute <- cutoff.k(attribute_weights, 5))
+(filtered_attribute_svm <- cutoff.k(attribute_weights_svm, 5))
+
+```
+**Notes:**
+The two datasets get same information gain results.
+So we can achieve est results with 5 attributes.
+
+## 2.2 Select variables for Building Models
+```{r}
+dt <- bank[filtered_attribute]
+dt_svm <- bank_svm[filtered_attribute]
+
+dt$class <- bank$y
+dt_svm$class <- bank_svm$y
+```
+
+
+# 3. Building Models
+```{r}
+library(caTools)
+set.seed(123)
+```
+
+## 3.1 Split the data for training and testing
+```{r}
+split <- sample.split(dt$class, SplitRatio = 0.7)
+split_svm <- sample.split(dt_svm$class, SplitRatio = 0.7)
+
+training = subset(dt, split==TRUE)
+test = subset(dt, split==FALSE)
+
+training_svm = subset(dt_svm, split_svm==TRUE)
+test_svm = subset(dt_svm, split_svm==FALSE)
+```
+
+
+## 3.2 Data Balancing
+- The column `class` shows whether a client subscribed a term deposit (yes) or did not subscribed a term deposit (no). 
+- Our aim is to predict subscription behavior. Therefore, our target variable is feature `class`.
+- Check the distribution of variable `class` by using functions table() and prop.table(). 
+```{r}
+table(training$class)
+prop.table(table(training$class))
+barplot(table(training$class), 
+        xlab = "Classes", ylab = "Frequency")
+
+table(training_svm$class)
+prop.table(table(training_svm$class))
+barplot(table(training_svm$class), 
+        xlab = "Classes", ylab = "Frequency")
+```
+**Notes:**
+- We need to figure out how to balance the sample training data in the following codes. 
+- And we can use F-score to choose the best ways of balancing the sample training data.
+
+## 3.2 Building Models Without Balancing the Sample Training Data
+```{r}
+library(ROSE)
+```
+
+### 3.2.1 SVM
+```{r}
+library(e1071)
+#radial for non-linear
+svm_radial_1 <- svm(class~., 
+                    data = training_svm, 
+                    kernel = "radial", 
+                    scale = TRUE, 
+                    probability = TRUE)
+svm_predict_1 <- predict(svm_radial_1, 
+                         test_svm, probability = TRUE)
+results_svm_1 <- test_svm
+results_svm_1$PredictionSVM <- svm_predict_1
+```
+
+
+### 3.2.2 Decision Tree
+```{r}
+library(partykit)
+decTree_1 <- ctree(class~., 
+                   data = training)
+decTree_predict_1 <- predict(decTree_1, 
+                             test, type="response")
+results_1 <- test
+results_1$PredictionTree <- decTree_predict_1
+```
+
+### 3.3.3 Naive Bayes
+```{r}
+#Naive Bayes
+library(naivebayes)
+naivebayes_1 <- naive_bayes(class~., 
+                            data = training)
+naivebayes_predict_1 <- predict(naivebayes_1, 
+                                test, type = "class")
+results_1$PredictionNB <- naivebayes_predict_1
+```
+
+### 3.2.4 Random Forest
+```{r}
+library(randomForest)
+model_RF_1 <- randomForest(class ~ ., 
+                           data =  training)
+RF_predict_1 <- predict(model_RF_1, 
+                        test, type = "response")
+results_1$PredictionRF <- RF_predict_1
+```
+
+
+```{r}
+correct_svm_1 <- which (results_svm_1$class == results_svm_1$PredictionSVM)
+length(correct_svm_1)
+
+correct_Tree_1 <- which(results_1$class == results_1$PredictionTree)
+length(correct_Tree_1)
+
+correct_NB_1 <- which(results_1$class == results_1$PredictionNB)
+length(correct_NB_1)
+
+correct_RF_1 <- which(results_1$class == results_1$PredictionRF)
+length(correct_RF_1)
+```
+
+### 3.2.5 F-score of Each Model Without Balancing the Sample Training Data
+
+```{r}
+library(caret)
+CM_DT_1 <- confusionMatrix(decTree_predict_1, 
+                           test$class, positive="yes")
+CM_SVM_1 <- confusionMatrix(svm_predict_1, 
+                            test_svm$class, positive="yes")
+CM_NB_1 <- confusionMatrix(naivebayes_predict_1, 
+                           test$class, positive="yes")
+CM_RF_1 <- confusionMatrix(RF_predict_1, 
+                           test$class, positive="yes")
+```
+
+```{r}
+beta <- 1
+F_measure_DT_1 <- ((1 + beta^2)*CM_DT_1$byClass[5]*CM_DT_1$byClass[6])/(beta^2 * CM_DT_1$byClass[5]+CM_DT_1$byClass[6])
+F_measure_SVM_1 <- ((1 + beta^2)*CM_SVM_1$byClass[5]*CM_SVM_1$byClass[6])/(beta^2 * CM_SVM_1$byClass[5]+CM_SVM_1$byClass[6])
+F_measure_NB_1 <- ((1 + beta^2)*CM_NB_1$byClass[5]*CM_NB_1$byClass[6])/(beta^2 * CM_NB_1$byClass[5]+CM_NB_1$byClass[6])
+F_measure_RF_1 <- ((1 + beta^2)*CM_RF_1$byClass[5]*CM_RF_1$byClass[6])/(beta^2 * CM_RF_1$byClass[5]+CM_RF_1$byClass[6])
+
+F_measure_1 <- data.frame(DT = F_measure_DT_1, 
+                          SVM = F_measure_SVM_1, 
+                          NB = F_measure_NB_1, 
+                          RF = F_measure_RF_1)
+row.names(F_measure_1) <- "F-measure_1"
+
+```
+
+## 3.3 Building Models with Both Balancing the Sample Training Data
+```{r}
+library(ROSE)
+```
+
+```{r}
+#Both under and over -> under sample 'no' and over sample 'yes'
+training_bothsampled <- ovun.sample(class~., 
+                                    data = training, 
+                                    method = "both", 
+                                    p = 0.45, 
+                                    seed = 1)$data
+
+table(training_bothsampled$class)
+prop.table(table(training_bothsampled$class))
+```
+
+```{r}
+#Both under and over -> under sample 'no' and over sample 'yes'
+training_svm_bothsampled <- ovun.sample(class~., 
+                                        data = training_svm, 
+                                        method = "both", 
+                                        p = 0.45, 
+                                        seed = 1)$data
+
+table(training_svm_bothsampled$class)
+prop.table(table(training_svm_bothsampled$class))
+```
+
+### 3.3.1 SVM
+```{r}
+library(e1071)
+#radial for non-linear
+svm_radial_2 <- svm(class~., data = training_svm_bothsampled, 
+                    kernel = "radial", scale = TRUE, probability = TRUE)
+svm_predict_2 <- predict(svm_radial_2, 
+                         test_svm, probability = TRUE)
+
+results_svm_2 <- test_svm
+results_svm_2$PredictionSVM <- svm_predict_2
+```
+
+
+### 3.3.2 Decision Tree
+```{r}
+library(partykit)
+decTree_2 <- ctree(class~., 
+                   data = training_bothsampled)
+decTree_predict_2 <- predict(decTree_2, 
+                             test, type="response")
+results_2 <- test
+results_2$PredictionTree <- decTree_predict_2
+```
+
+### 3.3.3 Naive Bayes
+```{r}
+#Naive Bayes
+library(naivebayes)
+naivebayes_2 <- naive_bayes(class~., 
+                            data = training_bothsampled)
+naivebayes_predict_2 <- predict(naivebayes_2, 
+                                test, type = "class")
+results_2$PredictionNB <- naivebayes_predict_2
+```
+
+### 3.3.4 Random Forest
+```{r}
+library(randomForest)
+model_RF_2 <- randomForest(class ~ . , 
+                           data =  training_bothsampled)
+RF_predict_2 <- predict(model_RF_2, 
+                        test, type = "response")
+results_2$PredictionRF <- RF_predict_2
+```
+
+
+```{r}
+correct_svm_2 <- which (results_svm_2$class == results_svm_2$PredictionSVM)
+length(correct_svm_2)
+
+correct_Tree_2 <- which(results_2$class == results_2$PredictionTree)
+length(correct_Tree_2)
+
+correct_NB_2 <- which(results_2$class == results_2$PredictionNB)
+length(correct_NB_2)
+
+correct_RF_2 <- which(results_2$class == results_2$PredictionRF)
+length(correct_RF_2)
+```
+
+### 3.3.5 F-score of Each Model with Both Balancing the Sample Training Data
+```{r}
+library(caret)
+CM_DT_2 <- confusionMatrix(decTree_predict_2, 
+                           test$class, positive="yes")
+CM_SVM_2 <- confusionMatrix(svm_predict_2, 
+                            test_svm$class, positive="yes")
+CM_NB_2 <- confusionMatrix(naivebayes_predict_2, 
+                           test$class, positive="yes")
+CM_RF_2 <- confusionMatrix(RF_predict_2, 
+                           test$class, positive="yes")
+```
+
+
+```{r}
+beta <- 1
+
+F_measure_DT_2 <- ((1 + beta^2)*CM_DT_2$byClass[5]*CM_DT_2$byClass[6])/(beta^2 * CM_DT_2$byClass[5]+CM_DT_2$byClass[6])
+
+F_measure_SVM_2 <- ((1 + beta^2)*CM_SVM_2$byClass[5]*CM_SVM_2$byClass[6])/(beta^2 * CM_SVM_2$byClass[5]+CM_SVM_2$byClass[6])
+
+F_measure_NB_2 <- ((1 + beta^2)*CM_NB_2$byClass[5]*CM_NB_2$byClass[6])/(beta^2 * CM_NB_2$byClass[5]+CM_NB_2$byClass[6])
+
+F_measure_RF_2 <- ((1 + beta^2)*CM_RF_2$byClass[5]*CM_RF_2$byClass[6])/(beta^2 * CM_RF_2$byClass[5]+CM_RF_2$byClass[6])
+
+
+F_measure_2 <- data.frame(DT = F_measure_DT_2, 
+                          SVM = F_measure_SVM_2, 
+                          NB = F_measure_NB_2, 
+                          RF = F_measure_RF_2)
+row.names(F_measure_2) <- "F-measure_2"
+
+```
+
+## 3.4 Compare Models Rusults Between Both Balancing the Sample Training Data and Without Balancing the Sample Training Data
+```{r}
+F_compare <- data.frame(DT = c(F_measure_DT_1,F_measure_DT_2),
+                        SVM = c(F_measure_SVM_1,F_measure_SVM_2),
+                        NB = c(F_measure_NB_1,F_measure_NB_2),
+                        RF = c(F_measure_RF_1,F_measure_RF_2))
+
+row.names(F_compare) <- c("F_without", "F_both")
+
+F_compare
+```
+**Notes:**
+- All models using both balancing the sample training data get higher
+F-score. 
+- We continue to evalue the models based on the both balancing data in the following code.
+
+# 4.Evaluation
+## 4.1 Evaluation Metrics
+
+```{r}
+summary_DT <- c(CM_DT_2$overall[1], CM_DT_2$byClass[c(1,3)])
+summary_SVM <- c(CM_SVM_2$overall[1], CM_SVM_2$byClass[c(1,3)])
+summary_NB <- c(CM_NB_2$overall[1], CM_NB_2$byClass[c(1,3)])
+summary_RF <- c(CM_RF_2$overall[1], CM_RF_2$byClass[c(1,3)])
+
+
+(summary <- data.frame(DT = summary_DT, 
+                       SVM = summary_SVM,
+                       NB = summary_NB, RF = summary_RF))
+
+row.names(F_measure_2) <- "F-measure"
+
+summary <- rbind(summary, F_measure_2)
+print(summary)
+```
+
+This summary shows Accuracy, Sensitivity, Pos Pred Value (precision) and F-measure of each model. First of all, Accuracy refers to the score of how well a model predicted the actual responses of customers correctly.
+
+- SVM shows the highest `Accuracy` amongst the three models. However, `Accuracy` is not the sole metric to assess a model's eligibility.
+
+- `Sensitivity` indicates what proportion of the actual "yes" responses are predicted correctly. This ratio is important in this direct marketing case, as better prediction for the actual "yes" responses can lead to higher marketing proficiency by contacting more actual "yes" responders. In the result of the summary, Decision Tree model has the highest `Sensitivity` amongst the three. 
+
+- `Pos Pred Value` shows what proportion of the predicted "yes" responses is actual "yes". This is also crucial ratio for this bank marketing case. This is because it is directly related to the marketing efficiency. That is, higher `Pos Pred Value` means less errors in predicting "yes" responders, which can then lower the unnecessary marketing cost of contacting actual "no" responders. According to the result, SVM has the highest `Pos Pred Value`. 
+
+- `F-measure` is the balanced metric of Pos Pred Value and Sensitivity. The result shows that SVM model has slightly higher `F-measure` than that of Decision Tree, while Naive Bayes model has relatively low `F-measure`. 
+
+According to the result, it seems ambiguous to decide which model is the most suitible approach for selecting customers. This is because each metric has different rankings of the models. However,it is assumed to be better to put more emphasis on the `Sensitivity` metric than other mertics. Due to the cost efficiency of direct marketing strategy, the costs of contacting customers will have relatively less impact on the expected value of the entire marketing than the profits from successful contacting. Therefore, more suitable apprach for selecting promising customers is the Decision Tree model. Even though Decision Tree is slightly outperformed by SVM in `Pos Pred Value` and `F-measure`, it has the highest `Sensitivity`. That is, Decision Tree model will provide more marketing benefits than the other models, which can sufficiently offset the costs of wrong direct marketing and generate more profits. 
+
+```{r}
+summary_for_viz <- gather(summary, key="models", value = "values")
+summary_for_viz <- summary_for_viz %>% 
+  mutate(metric = c("Accuracy", "Sensitivity",
+                    "Pos Pred Value", "F-measure",
+                    "Accuracy", "Sensitivity", 
+                    "Pos Pred Value", "F-measure",
+                    "Accuracy", "Sensitivity", 
+                    "Pos Pred Value", "F-measure", 
+                    "Accuracy", "Sensitivity", 
+                    "Pos Pred Value", "F-measure"))
+
+summary_for_viz$models <- as.factor(summary_for_viz$models)
+summary_for_viz$metric <- as.factor(summary_for_viz$metric)
+
+ggplot(summary_for_viz, aes(x=metric, y=values, fill = metric)) + geom_bar(stat="identity") + facet_grid(cols = vars(models)) + theme(axis.text.x = element_text(angle = 90)) + geom_hline(yintercept = summary$DT[2], col = "black", linetype = "dashed")
+```
+
+## 4.2 Receiver Operator Characteristic (ROC) Graph
+- ROC curve conveys the relationship between costs of direct marketing and corresponding profits. The x-axis of the curve indicates the costs of the direct marketing and the y-axis means the profits of the direct marketing. Therefore, a better model should be the more left upper going curve, indicating higher profits with lower costs. AUC is the area under the curve.
+
+```{r}
+library(pROC)
+```
+
+```{r}
+prob_SVM <- attr(svm_predict_2, "probabilities")[,2]
+prob_DT <- predict(decTree_2, test, type = "prob")
+prob_NB <- predict(naivebayes_2, test, type="prob")
+prob_RF <- predict(model_RF_2, test, type = "prob")
+```
+
+```{r}
+ROC_SVM <- roc(class~prob_SVM, test_svm)
+
+df_SVM <-  data.frame((1-ROC_SVM$specificities), ROC_SVM$sensitivities)
+```
+
+```{r}
+ROC_DT <- roc(class~prob_DT[,2], test)
+
+df_DT <- data.frame((1-ROC_DT$specificities), ROC_DT$sensitivities)
+```
+
+```{r}
+ROC_NB <- roc(class~prob_NB[,2], test)
+
+df_NB <- data.frame((1-ROC_NB$specificities), ROC_NB$sensitivities)
+```
+
+```{r}
+ROC_RF <- roc(class~prob_RF[,2], test)
+
+df_RF <- data.frame((1-ROC_RF$specificities), ROC_RF$sensitivities)
+```
+
+
+```{r}
+plot(df_DT, col="red", type="l", xlab="False Positive Rate (1-Specificity)", ylab="True Positive Rate (Sensitivity)")
+lines(df_SVM, col="green")
+lines(df_NB, col="yellow")
+lines(df_RF, col="black")
+
+abline(a=0, b=1, col = "grey")
+
+legend("bottomright",
+c("Decision Tree", "SVM", "Naive Bayes", "Random Forest"),
+fill=c("red", "green", "yellow", "black"))
+```
+
+```{r}
+(AUC_DT <- auc(ROC_DT))
+(AUC_SVM <- auc(ROC_SVM))
+(AUC_NB <- auc(ROC_NB))
+(AUC_RF <- auc(ROC_RF))
+(AUC_summary <- data.frame(AUC_SVM, AUC_DT, AUC_NB, AUC_RF))
+```
+
+## 4.3 Cumulative Response(Gain) Chart
+- "INCREASE IN THE CORRECT PREDICTION % FOR EACH INCREASE OF INFORMATION GAIN %" 
+
+```{r}
+library(CustomerScoringMetrics)
+```
+
+```{r}
+GainTable_DT <- cumGainsTable(prob_DT[,2], test$class, resolution = 1/100)
+GainTable_SVM <- cumGainsTable(prob_SVM, test_svm$class, resolution = 1/100)
+GainTable_NB <- cumGainsTable(prob_NB[,2], test$class, resolution = 1/100)
+GainTable_RF <- cumGainsTable(prob_RF[,2], test$class, resolution = 1/100)
+```
+
+```{r}
+plot(GainTable_DT[,4], col="red", type="l",     
+xlab="Percentage of test instances", ylab="Percentage of correct predictions")
+lines(GainTable_SVM[,4], col="green")
+lines(GainTable_NB[,4], col="yellow")
+lines(GainTable_RF[,4], col="black")
+
+abline(a = 0, b = 1, col = "grey")
+
+legend("bottomright",
+c("Decision tree", "SVM", "Naive Bayes", "Random Forest"),
+fill=c("red","green", "yellow", "black"))
+```
+
+
