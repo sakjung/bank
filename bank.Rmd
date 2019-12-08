@@ -124,7 +124,9 @@ prop.table(table(training_svm$class))
 barplot(table(training_svm$class), 
         xlab = "Classes", ylab = "Frequency")
 ```
+
 **Notes:**
+
 - We need to figure out how to balance the sample training data in the following codes. 
 - And we can use F-score to choose the best ways of balancing the sample training data.
 
@@ -385,9 +387,9 @@ summary <- rbind(summary, F_measure_2)
 print(summary)
 ```
 
-This summary shows Accuracy, Sensitivity, Pos Pred Value (precision) and F-measure of each model. First of all, Accuracy refers to the score of how well a model predicted the actual responses of customers correctly.
+This summary shows Accuracy, Sensitivity, Pos Pred Value (precision) and F-measure of each model. 
 
-- SVM shows the highest `Accuracy` amongst the three models. However, `Accuracy` is not the sole metric to assess a model's eligibility.
+- `Accuracy` refers to the score of how well a model predicted the actual responses of customers correctly. SVM shows the highest `Accuracy` amongst the three models. However, `Accuracy` is not the sole metric to assess a model's eligibility.
 
 - `Sensitivity` indicates what proportion of the actual "yes" responses are predicted correctly. This ratio is important in this direct marketing case, as better prediction for the actual "yes" responses can lead to higher marketing proficiency by contacting more actual "yes" responders. In the result of the summary, Decision Tree model has the highest `Sensitivity` amongst the three. 
 
@@ -395,7 +397,7 @@ This summary shows Accuracy, Sensitivity, Pos Pred Value (precision) and F-measu
 
 - `F-measure` is the balanced metric of Pos Pred Value and Sensitivity. The result shows that SVM model has slightly higher `F-measure` than that of Decision Tree, while Naive Bayes model has relatively low `F-measure`. 
 
-According to the result, it seems ambiguous to decide which model is the most suitible approach for selecting customers. This is because each metric has different rankings of the models. However,it is assumed to be better to put more emphasis on the `Sensitivity` metric than other mertics. Due to the cost efficiency of direct marketing strategy, the costs of contacting customers will have relatively less impact on the expected value of the entire marketing than the profits from successful contacting. Therefore, more suitable apprach for selecting promising customers is the Decision Tree model. Even though Decision Tree is slightly outperformed by SVM in `Pos Pred Value` and `F-measure`, it has the highest `Sensitivity`. That is, Decision Tree model will provide more marketing benefits than the other models, which can sufficiently offset the costs of wrong direct marketing and generate more profits. 
+According to the entire evaluation, it seems ambiguous to determine which model is the most suitable approach for selecting customers for the deposit marketing. However, sensitivity method should be considered with more weights in the direct marketing case. Due to cost-efficiency of direct marketing campaign, the costs of contacting customers will have relatively low impacts on the total expected value of the entire marketing than the profits of contacting prospective customers who will be most likely to say “yes” to the deposit offer. In other words, it is better to implement greedy direct marketing in order to obtain optimum expected value, focusing more on the profits rather than the costs. Therefore, `Decision Tree` model is determined to be the most suitable model. Even though `Decision Tree` is slightly outperformed by `SVM` and `RF` in Precision and F-measure, it has the highest Sensitivity as shown with the black dashed line of the summary figure. Therefore, `Decision Tree` model will provide more marketing benefits than the other models, which can sufficiently offset the costs of wrong direct marketing and generate more profits.
 
 ```{r}
 summary_for_viz <- gather(summary, key="models", value = "values")
