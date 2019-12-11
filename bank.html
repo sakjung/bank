@@ -374,12 +374,12 @@ summary {
 <h1>1. Data Understanding</h1>
 <pre class="r"><code>rm(list=ls())
 library(&quot;tidyverse&quot;)</code></pre>
-<pre><code>## -- Attaching packages ----------------------------------------------- tidyverse 1.3.0 --</code></pre>
+<pre><code>## -- Attaching packages ------------------------------------------------------ tidyverse 1.3.0 --</code></pre>
 <pre><code>## √ ggplot2 3.2.1     √ purrr   0.3.3
 ## √ tibble  2.1.3     √ dplyr   0.8.3
 ## √ tidyr   1.0.0     √ stringr 1.4.0
 ## √ readr   1.3.1     √ forcats 0.4.0</code></pre>
-<pre><code>## -- Conflicts -------------------------------------------------- tidyverse_conflicts() --
+<pre><code>## -- Conflicts --------------------------------------------------------- tidyverse_conflicts() --
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()</code></pre>
 <div id="collect-initial-data" class="section level2">
@@ -497,10 +497,69 @@ bank_svm &lt;- read.csv(&quot;bank.csv&quot;, sep=&quot;;&quot;)</code></pre>
 ##  3rd Qu.: 0.0000                            
 ##  Max.   :25.0000                            
 ## </code></pre>
-<p><strong>bank client data:</strong> 1 - age (numeric) 2 - job : type of job (categorical: “admin.”,“unknown”,“unemployed”,“management”,“housemaid”,“entrepreneur”,“student”,“blue-collar”,“self-employed”,“retired”,“technician”,“services”) 3 - marital : marital status (categorical: “married”,“divorced”,“single”; note: “divorced” means divorced or widowed) 4 - education (categorical:“unknown”,“secondary”,“primary”,“tertiary”) 5 - default: has credit in default? (binary: “yes”,“no”) 6 - balance: average yearly balance, in euros (numeric) 7 - housing: has housing loan? (binary: “yes”,“no”) 8 - loan: has personal loan? (binary: “yes”,“no”)</p>
-<p><strong>related with the last contact of the current campaign:</strong> 9 - contact: contact communication type (categorical:“unknown”,“telephone”,“cellular”) 10 - day: last contact day of the month (numeric) 11 - month: last contact month of year (categorical: “jan”, “feb”, “mar”, …, “nov”, “dec”) 12 - duration: last contact duration, in seconds (numeric)</p>
-<p><strong>other attributes:</strong> 13 - campaign: number of contacts performed during this campaign and for this client (numeric, includes last contact) 14 - pdays: number of days that passed by after the client was last contacted from a previous campaign (numeric, -1 means client was not previously contacted) 15 - previous: number of contacts performed before this campaign and for this client (numeric) 16 - poutcome: outcome of the previous marketing campaign (categorical: “unknown”,“other”,“failure”,“success”)</p>
-<p><strong>Output variable (desired target):</strong> 17 - y - has the client subscribed a term deposit? (binary: “yes”,“no”)</p>
+<p><strong>bank client data:</strong></p>
+<ul>
+<li><ol style="list-style-type: decimal">
+<li>age (numeric)</li>
+</ol></li>
+<li><ol start="2" style="list-style-type: decimal">
+<li>job : type of job (categorical: “admin.”,“unknown”,“unemployed”,“management”,“housemaid”,“entrepreneur”,“student”,“blue-collar”,“self-employed”,“retired”,“technician”,“services”)</li>
+</ol></li>
+<li><ol start="3" style="list-style-type: decimal">
+<li>marital : marital status (categorical: “married”,“divorced”,“single”; note: “divorced” means divorced or widowed)</li>
+</ol></li>
+<li><ol start="4" style="list-style-type: decimal">
+<li>education (categorical:“unknown”,“secondary”,“primary”,“tertiary”)</li>
+</ol></li>
+<li><ol start="5" style="list-style-type: decimal">
+<li>default: has credit in default? (binary: “yes”,“no”)</li>
+</ol></li>
+<li><ol start="6" style="list-style-type: decimal">
+<li>balance: average yearly balance, in euros (numeric)</li>
+</ol></li>
+<li><ol start="7" style="list-style-type: decimal">
+<li>housing: has housing loan? (binary: “yes”,“no”)</li>
+</ol></li>
+<li><ol start="8" style="list-style-type: decimal">
+<li>loan: has personal loan? (binary: “yes”,“no”)</li>
+</ol></li>
+</ul>
+<p><strong>related with the last contact of the current campaign:</strong></p>
+<ul>
+<li><ol start="9" style="list-style-type: decimal">
+<li>contact: contact communication type (categorical:“unknown”,“telephone”,“cellular”)</li>
+</ol></li>
+<li><ol start="10" style="list-style-type: decimal">
+<li>day: last contact day of the month (numeric)</li>
+</ol></li>
+<li><ol start="11" style="list-style-type: decimal">
+<li>month: last contact month of year (categorical: “jan”, “feb”, “mar”, …, “nov”, “dec”)</li>
+</ol></li>
+<li><ol start="12" style="list-style-type: decimal">
+<li>duration: last contact duration, in seconds (numeric)</li>
+</ol></li>
+</ul>
+<p><strong>other attributes:</strong></p>
+<ul>
+<li><ol start="13" style="list-style-type: decimal">
+<li>campaign: number of contacts performed during this campaign and for this client (numeric, includes last contact)</li>
+</ol></li>
+<li><ol start="14" style="list-style-type: decimal">
+<li>pdays: number of days that passed by after the client was last contacted from a previous campaign (numeric, -1 means client was not previously contacted)</li>
+</ol></li>
+<li><ol start="15" style="list-style-type: decimal">
+<li>previous: number of contacts performed before this campaign and for this client (numeric)</li>
+</ol></li>
+<li><ol start="16" style="list-style-type: decimal">
+<li>poutcome: outcome of the previous marketing campaign (categorical: “unknown”,“other”,“failure”,“success”)</li>
+</ol></li>
+</ul>
+<p><strong>Output variable (desired target):</strong></p>
+<ul>
+<li><ol start="17" style="list-style-type: decimal">
+<li>y - has the client subscribed a term deposit? (binary: “yes”,“no”)</li>
+</ol></li>
+</ul>
 <p>-&gt; WE ARE INTERESTED IN “YES”!</p>
 </div>
 </div>
@@ -515,7 +574,7 @@ attribute_weights_svm &lt;- information.gain(y~., bank_svm)</code></pre>
 <pre><code>## [1] &quot;duration&quot; &quot;poutcome&quot; &quot;pdays&quot;    &quot;month&quot;    &quot;contact&quot;</code></pre>
 <pre class="r"><code>(filtered_attribute_svm &lt;- cutoff.k(attribute_weights_svm, 5))</code></pre>
 <pre><code>## [1] &quot;duration&quot; &quot;poutcome&quot; &quot;pdays&quot;    &quot;month&quot;    &quot;contact&quot;</code></pre>
-<p><strong>Notes:</strong> The two datasets get same information gain results. So we can achieve est results with 5 attributes.</p>
+<p><strong>Notes:</strong> The two datasets have same information gain results. We will use these top 5 attributes to build our models.</p>
 </div>
 <div id="select-variables-for-building-models" class="section level2">
 <h2>2.2 Select variables for Building Models</h2>
@@ -544,8 +603,8 @@ test_svm = subset(dt_svm, split_svm==FALSE)</code></pre>
 <div id="data-balancing" class="section level2">
 <h2>3.2 Data Balancing</h2>
 <ul>
-<li>The column <code>class</code> shows whether a client subscribed a term deposit (yes) or did not subscribed a term deposit (no).</li>
-<li>Our aim is to predict subscription behavior. Therefore, our target variable is feature <code>class</code>.</li>
+<li>The column <code>class</code> shows whether a client subscribed a term deposit (yes) or did not subscrib a term deposit (no).</li>
+<li>Our aim is to predict subscription behavior. Therefore, our target variable is <code>class</code>.</li>
 <li>Check the distribution of variable <code>class</code> by using functions table() and prop.table().</li>
 </ul>
 <pre class="r"><code>table(training$class)</code></pre>
@@ -583,7 +642,6 @@ test_svm = subset(dt_svm, split_svm==FALSE)</code></pre>
 <div id="svm" class="section level3">
 <h3>3.2.1 SVM</h3>
 <pre class="r"><code>library(e1071)
-#radial for non-linear
 svm_radial_1 &lt;- svm(class~., 
                     data = training_svm, 
                     kernel = &quot;radial&quot;, 
@@ -718,7 +776,6 @@ table(training_svm_bothsampled$class)</code></pre>
 <div id="svm-1" class="section level3">
 <h3>3.3.1 SVM</h3>
 <pre class="r"><code>library(e1071)
-#radial for non-linear
 svm_radial_2 &lt;- svm(class~., data = training_svm_bothsampled, 
                     kernel = &quot;radial&quot;, scale = TRUE, probability = TRUE)
 svm_predict_2 &lt;- predict(svm_radial_2, 
