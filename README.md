@@ -1,2 +1,2 @@
 # bank
-project - Data Analysis for a bank direct marketing 
+project - Data Mining for a bank direct marketing 
