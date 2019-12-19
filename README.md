@@ -1,2 +1,6 @@
-# bank
-project - Data Mining for a bank direct marketing 
+---
+layout: page
+title: bank direct marketing
+---
+
+Project - Data Mining for a bank direct marketing 
